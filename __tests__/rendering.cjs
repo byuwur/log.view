@@ -22,7 +22,10 @@ test("LOG library", { timeout: 30000 }, async (t) => {
   // Load authored files directly; CDN availability is not part of this contract.
   await page.route("**/*", (route) => route.abort());
   // ===== BROWSER FIXTURE =====
-  await page.setContent('<!doctype html><meta charset="UTF-8"><div id="viewer"></div>');
+  await page.setContent(
+    /* HTML */ `<!doctype html><meta charset="UTF-8" />
+      <div id="viewer"></div>`
+  );
   await page.addStyleTag({ path: path.join(__dirname, "../log.css") });
   await page.addScriptTag({ path: path.join(__dirname, "../log.js") });
   await page.evaluate(() => {
@@ -68,7 +71,7 @@ test("LOG library", { timeout: 30000 }, async (t) => {
 
   await t.test("rejects invalid input and keeps log markup inert", async () => {
     assert.equal(await page.evaluate(() => byLOGviewer(root, 42).ready), false);
-    await page.evaluate(() => byLOGviewer(root, '<img src=x onerror="window.injected=1">').ready);
+    await page.evaluate(() => byLOGviewer(root, /* HTML */ `<img src="x" onerror="window.injected=1" />`).ready);
     assert.equal(await page.locator("#viewer img").count(), 0);
     assert.match(await page.locator(".byLOGmessage").textContent(), /<img/);
     assert.equal(await page.evaluate(() => window.injected), undefined);
