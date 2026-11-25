@@ -59,6 +59,15 @@ Open [index.html](index.html) locally. Its host assets use the network. Exported
 
 `byLOGviewer(element, input?, options?)` accepts text, a record, or an array of strings/records. Omitted input uses the target's text. Text splits on CR/LF/CRLF; a trailing newline adds no entry. Empty strings have no entries. JSON object lines are parsed; malformed JSON stays plain text.
 
+A source string beginning with `https://`, `http://`, `/`, `./`, or `../` and containing no whitespace loads a file. Use `{ url: "example.txt" }` for a bare filename. To display a URL string or a single-property `{ url }` record as data, pass `{ sourceType: "text" }` in the options.
+
+```javascript
+const viewer = byLOGviewer(target, "./example.txt");
+await viewer.ready;
+```
+
+Relative URLs resolve against the page. Cross-origin files require CORS. A failed or superseded load resolves `ready` to `false`.
+
 The default parser recognizes a leading ISO-like timestamp with optional severity, or a leading severity with optional brackets. Supported levels: TRACE, DEBUG, INFO, WARN/WARNING, ERROR, and FATAL/CRITICAL. Other formats stay UNKNOWN; words inside messages are not treated as severity.
 
 Timestamps retain their input text without timezone conversion. Text after the timestamp/severity becomes the message.

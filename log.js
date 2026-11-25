@@ -471,6 +471,7 @@
     state.destroy = () => {
       if (!state.active) return;
       state.active = false;
+      state.request?.abort();
       cancelAnimationFrame(state.motionFrame);
       // An old controller must not clear a replacement mounted on the same element.
       if (instances.get(element) === state) {
@@ -509,11 +510,23 @@
 
   // ===== PUBLIC API =====
   // Render log text/records. append() queues batches in order; disposal cancels unfinished batches.
+  const sourceURL = (input, options) => {
+    if (options?.sourceType === "text") return;
+    if (typeof input === "string") return /^(?:https?:\/\/|\.{1,2}\/|\/(?![/*]))[^\s]+$/i.test(input) ? input : undefined;
+    if (input && Object.hasOwn(input, "url") && typeof input.url === "string" && Object.keys(input).length === 1) return input.url.trim() || undefined;
+  };
+  const fetchSource = async (url, signal) => {
+    const response = await fetch(url, { signal });
+    if (!response.ok) throw new Error(`Unable to load source: HTTP ${response.status}.`);
+    return response.text();
+  };
+
   function byLOGviewer(element, input, options = {}) {
     options = { layout: "inline", batchSize: 200, maxEntries: 10000, ...options };
     options.batchSize = positive(options.batchSize, 200, 1000);
     options.maxEntries = positive(options.maxEntries, 10000, 100000);
     if (options.parser !== undefined && typeof options.parser !== "function") throw new TypeError("parser must be a function.");
+    const url = sourceURL(input, options);
     if (input === undefined) input = element?.textContent ?? "";
     let entries = [],
       filtered = [],
@@ -630,10 +643,15 @@
     // Serialize appends so parser indices and retained history follow the caller's batch order.
     let queue = Promise.resolve(true);
     // Queue one atomic batch. Parsing must finish before retained entries and parser indices advance.
-    const append = (batch) => {
+    const append = (batch, url) => {
       queue = queue.then(async () => {
         if (!state.active) return false;
         try {
+          if (url) {
+            state.request = new AbortController();
+            batch = await fetchSource(url, state.request.signal);
+            if (!state.active) return false;
+          }
           const source = logInputs(batch),
             parsed = [];
           for (let i = 0; i < source.length; i++) {
@@ -679,11 +697,11 @@
       });
       return queue;
     };
-    state.ready = append(input);
+    state.ready = append(input, url);
     Object.assign(state.api, {
       ready: state.ready,
       destroy: state.destroy,
-      append,
+      append: (batch) => append(batch),
       setOptions(changes) {
         if (!state.active) return;
         const next = { ...changes };
