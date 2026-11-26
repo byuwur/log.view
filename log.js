@@ -11,7 +11,7 @@
   if (global.byLOGviewer?.initialized) return;
 
   // ===== METADATA =====
-  byLOGviewer.VERSION = "2.4"; // 2026-11-25
+  byLOGviewer.VERSION = "2.5"; // 2026-11-26
   // Mirrored helpers are checked by code.view/.github/scripts/check-family.mjs.
   const componentName = "LOG.view";
   const themeFile = "log";
